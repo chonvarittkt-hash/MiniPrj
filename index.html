@@ -86,11 +86,12 @@
         var roadBufferGroup = L.layerGroup().addTo(map);
         var shopBufferGroup = L.layerGroup().addTo(map);
 
-        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map.GeoJSON (ทึบ 100%)
+        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map.geojson (ตัวเล็กหมด)
         fetch('bivariate_map.geojson')
             .then(res => res.json())
             .then(data => {
-                var layer = L.geojson(data, {
+                // แก้ไขจาก L.geojson เป็น L.geoJSON ตามหลัก Leaflet API
+                var layer = L.geoJSON(data, {
                     pane: 'bivariatePane',
                     style: function(feature) {
                         return {
@@ -115,27 +116,28 @@
                 if (bounds.isValid()) {
                     map.fitBounds(bounds);
                 }
-            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ bivariate_map.GeoJSON ได้:', err));
+            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ bivariate_map.geojson ได้:', err));
 
-        // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer.GeoJSON (สี #49bef1 ทึบ 70%)
+        // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer.geojson (ตัวเล็กหมด)
         fetch('road_buffer.geojson')
             .then(res => res.json())
             .then(data => {
-                L.geojson(data, {
+                // แก้ไขจาก L.geojson เป็น L.geoJSON ตามหลัก Leaflet API
+                L.geoJSON(data, {
                     pane: 'roadPane',
                     style: {
-                        color: '#ffffff',        // เส้นขอบขาวบาง ๆ คัตติ้งสวย ๆ
+                        color: '#ffffff',        // เส้นขอบขาวบาง ๆ
                         weight: 0.6,
-                        fillColor: '#49bef1',    // 🌟 อัปเดตสีถนนตามสั่งครับเบบี๋
+                        fillColor: '#49bef1',    
                         fillOpacity: 0.7         // ทึบแสง 70%
                     },
                     onEachFeature: function(feature, layer) {
                         layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> แนวขอบเขตโครงข่ายถนนหลัก (Buffer 100 เมตร)</div>");
                     }
                 }).addTo(roadBufferGroup);
-            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ road_buffer.GeoJSON ได้:', err));
+            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ road_buffer.geojson ได้:', err));
 
-        // 7. โหลดเลเยอร์บนสุด: seven_buffer.GeoJSON (สี #3596ff ทึบ 50%)
+        // 7. โหลดเลเยอร์บนสุด: seven_buffer.geojson (ตัวเล็กหมด)
         fetch('seven_buffer.geojson')
             .then(res => res.json())
             .then(data => {
@@ -144,14 +146,14 @@
                     style: {
                         color: '#3596ff',        // เส้นขอบสีกรมท่า/น้ำเงินสว่าง
                         weight: 1.2,
-                        fillColor: '#3596ff',    // 🌟 อัปเดตสีรัศมีเซเว่นตามสั่งครับเบบี๋
+                        fillColor: '#3596ff',    
                         fillOpacity: 0.5         // ทึบแสง 50%
                     },
                     onEachFeature: function(feature, layer) {
                         layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> รัศมีบริการของร้าน 7-11 เดิม (Buffer 500 เมตร)</div>");
                     }
                 }).addTo(shopBufferGroup);
-            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ seven_buffer.GeoJSON ได้:', err));
+            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ seven_buffer.geojson ได้:', err));
 
         // 8. แผงควบคุมเลเยอร์มุมขวาบน (Layer Control)
         var overlayLayers = {
@@ -180,4 +182,5 @@
 
     </script>
 </body>
+</html>
 </html>
