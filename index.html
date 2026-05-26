@@ -11,7 +11,6 @@
         body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #111; }
         #map { height: 100vh; width: 100%; }
         
-        /* ปรับสไตล์กล่องชื่อเรื่องให้เข้ากับธีมมืด */
         .map-title {
             position: absolute;
             top: 15px;
@@ -28,7 +27,6 @@
         .map-title h2 { margin: 0 0 5px 0; font-size: 18px; color: #ffffff; }
         .map-title p { margin: 0; font-size: 12px; color: #b2bec3; line-height: 1.4; }
 
-        /* ปรับสไตล์กล่องคำอธิบายสัญลักษณ์ (Legend) ธีมมืด */
         .legend {
             background: rgba(30, 30, 30, 0.90);
             padding: 15px;
@@ -43,7 +41,6 @@
         .legend i { width: 18px; height: 18px; float: left; margin-right: 10px; opacity: 1; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
         .legend-section { margin-top: 10px; padding-top: 5px; }
         
-        /* สไตล์สำหรับปุ่มควบคุมเลเยอร์ */
         .leaflet-control-layers {
             background: rgba(30, 30, 30, 0.90) !important;
             color: #ffffff !important;
@@ -73,24 +70,23 @@
 
         // 3. ล็อกระดับแผ่นใสความสูงต่ำ (Panes) 
         map.createPane('bivariatePane');
-        map.getPane('bivariatePane').style.zIndex = 400; // ล่างสุด
+        map.getPane('bivariatePane').style.zIndex = 400; 
 
         map.createPane('roadPane');
-        map.getPane('roadPane').style.zIndex = 500;      // ชั้นกลาง
+        map.getPane('roadPane').style.zIndex = 500;      
 
         map.createPane('sevenPane');
-        map.getPane('sevenPane').style.zIndex = 600;     // บนสุด
+        map.getPane('sevenPane').style.zIndex = 600;     
 
         // 4. กำหนดกลุ่มตัวแปร (Layer Groups)
         var bivariateGroup = L.layerGroup().addTo(map);
         var roadBufferGroup = L.layerGroup().addTo(map);
         var shopBufferGroup = L.layerGroup().addTo(map);
 
-        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map.geojson (ตัวเล็กหมด)
+        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map
         fetch('bivariate_map.geojson')
             .then(res => res.json())
             .then(data => {
-                // แก้ไขจาก L.geojson เป็น L.geoJSON ตามหลัก Leaflet API
                 var layer = L.geoJSON(data, {
                     pane: 'bivariatePane',
                     style: function(feature) {
@@ -118,18 +114,17 @@
                 }
             }).catch(err => console.error('ไม่สามารถโหลดไฟล์ bivariate_map.geojson ได้:', err));
 
-        // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer.geojson (ตัวเล็กหมด)
+        // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer
         fetch('road_buffer.geojson')
             .then(res => res.json())
             .then(data => {
-                // แก้ไขจาก L.geojson เป็น L.geoJSON ตามหลัก Leaflet API
                 L.geoJSON(data, {
                     pane: 'roadPane',
                     style: {
-                        color: '#ffffff',        // เส้นขอบขาวบาง ๆ
+                        color: '#ffffff',        
                         weight: 0.6,
                         fillColor: '#49bef1',    
-                        fillOpacity: 0.7         // ทึบแสง 70%
+                        fillOpacity: 0.7         
                     },
                     onEachFeature: function(feature, layer) {
                         layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> แนวขอบเขตโครงข่ายถนนหลัก (Buffer 100 เมตร)</div>");
@@ -137,17 +132,17 @@
                 }).addTo(roadBufferGroup);
             }).catch(err => console.error('ไม่สามารถโหลดไฟล์ road_buffer.geojson ได้:', err));
 
-        // 7. โหลดเลเยอร์บนสุด: seven_buffer.geojson (ตัวเล็กหมด)
+        // 7. โหลดเลเยอร์บนสุด: seven_buffer
         fetch('seven_buffer.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
                     pane: 'sevenPane',
                     style: {
-                        color: '#3596ff',        // เส้นขอบสีกรมท่า/น้ำเงินสว่าง
+                        color: '#3596ff',        
                         weight: 1.2,
                         fillColor: '#3596ff',    
-                        fillOpacity: 0.5         // ทึบแสง 50%
+                        fillOpacity: 0.5         
                     },
                     onEachFeature: function(feature, layer) {
                         layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> รัศมีบริการของร้าน 7-11 เดิม (Buffer 500 เมตร)</div>");
@@ -182,5 +177,4 @@
 
     </script>
 </body>
-</html>
 </html>
