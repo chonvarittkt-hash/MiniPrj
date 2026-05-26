@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nakhon Pathom - 7-11 Location Intelligence (Dark Edition)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #111; }
+        #map { height: 100vh; width: 100%; }
+        
+        /* ปรับสไตล์กล่องชื่อเรื่องให้เข้ากับธีมมืด */
+        .map-title {
+            position: absolute;
+            top: 15px;
+            left: 50px;
+            z-index: 1000;
+            background: rgba(30, 30, 30, 0.90);
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            max-width: 380px;
+            border-left: 5px solid #3596ff;
+            color: #fff;
+        }
+        .map-title h2 { margin: 0 0 5px 0; font-size: 18px; color: #ffffff; }
+        .map-title p { margin: 0; font-size: 12px; color: #b2bec3; line-height: 1.4; }
+
+        /* ปรับสไตล์กล่องคำอธิบายสัญลักษณ์ (Legend) ธีมมืด */
+        .legend {
+            background: rgba(30, 30, 30, 0.90);
+            padding: 15px;
+            line-height: 22px;
+            color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            font-size: 12px;
+            min-width: 200px;
+        }
+        .legend h4 { margin: 0 0 8px 0; font-size: 13px; color: #ffffff; border-bottom: 1px solid #636e72; padding-bottom: 5px; }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 10px; opacity: 1; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
+        .legend-section { margin-top: 10px; padding-top: 5px; }
+        
+        /* สไตล์สำหรับปุ่มควบคุมเลเยอร์ */
+        .leaflet-control-layers {
+            background: rgba(30, 30, 30, 0.90) !important;
+            color: #ffffff !important;
+            border: none !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="map-title">
+        <h2>แผนที่แสดงความสามารถในการเข้าถึง 7-11</h2>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. เริ่มต้นสร้างแผนที่
+        var map = L.map('map').setView([13.8140, 100.0382], 10);
+
+        // 2. เรียกแผนที่ฐาน CARTO Dark Matter
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors & CARTO'
+        }).addTo(map);
+
+        // 3. ล็อกระดับแผ่นใสความสูงต่ำ (Panes) 
+        map.createPane('bivariatePane');
+        map.getPane('bivariatePane').style.zIndex = 400; // ล่างสุด
+
+        map.createPane('roadPane');
+        map.getPane('roadPane').style.zIndex = 500;      // ชั้นกลาง
+
+        map.createPane('sevenPane');
+        map.getPane('sevenPane').style.zIndex = 600;     // บนสุด
+
+        // 4. กำหนดกลุ่มตัวแปร (Layer Groups)
+        var bivariateGroup = L.layerGroup().addTo(map);
+        var roadBufferGroup = L.layerGroup().addTo(map);
+        var shopBufferGroup = L.layerGroup().addTo(map);
+
+        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map.GeoJSON (ทึบ 100%)
+        fetch('bivariate_map.GeoJSON')
+            .then(res => res.json())
+            .then(data => {
+                var layer = L.geoJSON(data, {
+                    pane: 'bivariatePane',
+                    style: function(feature) {
+                        return {
+                            fillColor: feature.properties.hex_color || '#bdc3c7',
+                            weight: 0.6,
+                            opacity: 1,
+                            color: '#1e1e1e', 
+                            fillOpacity: 1.0
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        var popupContent = "<div style='font-family:Arial; font-size:13px; color:#333;'>" +
+                            "<b>รหัสพื้นที่ ID:</b> " + (feature.properties.id || 'ไม่มีข้อมูล') + "<br>" +
+                            "<b>Matrix Code:</b> " + (feature.properties.Matrix_Code || 'ไม่มีข้อมูล') + "<br>" +
+                            "<b>ผลวิเคราะห์ทำเล:</b> <span style='color:" + (feature.properties.hex_color || '#333') + "; font-weight:bold;'>" + (feature.properties.ผลวิเคราะห์ทำเล || 'ไม่ได้ระบุ') + "</span>" +
+                            "</div>";
+                        layer.bindPopup(popupContent);
+                    }
+                }).addTo(bivariateGroup);
+
+                var bounds = layer.getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds);
+                }
+            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ bivariate_map.GeoJSON ได้:', err));
+
+        // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer.GeoJSON (สี #49bef1 ทึบ 70%)
+        fetch('road_buffer.GeoJSON')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    pane: 'roadPane',
+                    style: {
+                        color: '#ffffff',        // เส้นขอบขาวบาง ๆ คัตติ้งสวย ๆ
+                        weight: 0.6,
+                        fillColor: '#49bef1',    // 🌟 อัปเดตสีถนนตามสั่งครับเบบี๋
+                        fillOpacity: 0.7         // ทึบแสง 70%
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> แนวขอบเขตโครงข่ายถนนหลัก (Buffer 100 เมตร)</div>");
+                    }
+                }).addTo(roadBufferGroup);
+            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ road_buffer.GeoJSON ได้:', err));
+
+        // 7. โหลดเลเยอร์บนสุด: seven_buffer.GeoJSON (สี #3596ff ทึบ 50%)
+        fetch('seven_buffer.GeoJSON')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    pane: 'sevenPane',
+                    style: {
+                        color: '#3596ff',        // เส้นขอบสีกรมท่า/น้ำเงินสว่าง
+                        weight: 1.2,
+                        fillColor: '#3596ff',    // 🌟 อัปเดตสีรัศมีเซเว่นตามสั่งครับเบบี๋
+                        fillOpacity: 0.5         // ทึบแสง 50%
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> รัศมีบริการของร้าน 7-11 เดิม (Buffer 500 เมตร)</div>");
+                    }
+                }).addTo(shopBufferGroup);
+            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ seven_buffer.GeoJSON ได้:', err));
+
+        // 8. แผงควบคุมเลเยอร์มุมขวาบน (Layer Control)
+        var overlayLayers = {
+            "🏪 พื้นที่บริการ 7-11": shopBufferGroup,
+            "🛣️ โครงข่ายถนนหลัก": roadBufferGroup,
+            "<span style='color: #a8a5ff; font-weight:bold;'>📊 Bivariate Map</span>": bivariateGroup
+        };
+        L.control.layers(null, overlayLayers, {collapsed: false}).addTo(map);
+
+        // 9. กล่องอธิบายแถบสีและสัญลักษณ์เชิงพื้นที่ (Legend)
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML += '<h4>ผลวิเคราะห์ทำเล (Bivariate)</h4>';
+            div.innerHTML += '<i style="background: #541c66"></i> คนเยอะ - ร้านเยอะ<br>';
+            div.innerHTML += '<i style="background: #9b52e0"></i> คนเยอะ - ร้านน้อย<br>';
+            div.innerHTML += '<i style="background: #e0529c"></i> คนน้อย - ร้านเยอะ<br>';
+            div.innerHTML += '<i style="background: #e8e8e8"></i> คนน้อย - ร้านน้อย<br>';
+            
+            div.innerHTML += '<div class="legend-section"><h4>ขอบเขตการวิเคราะห์</h4></div>';
+            div.innerHTML += '<span style="display:inline-block; width:18px; height:10px; background:#3596ff; opacity:0.5; border: 1px solid #3596ff; border-radius:2px; margin-right:10px;"></span> รัศมีบริการร้านเดิม (ทึบ 50%)<br>';
+            div.innerHTML += '<span style="display:inline-block; width:18px; height:10px; background:#49bef1; opacity:0.7; border: 1px solid #ffffff; border-radius:2px; margin-right:10px;"></span> แนวถนนหลัก (ทึบ 70%)';
+            return div;
+        };
+        legend.addTo(map);
+
+    </script>
+</body>
+</html>
