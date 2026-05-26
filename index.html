@@ -87,10 +87,10 @@
         var shopBufferGroup = L.layerGroup().addTo(map);
 
         // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map.GeoJSON (ทึบ 100%)
-        fetch('bivariate_map.GeoJSON')
+        fetch('bivariate_map.geojson')
             .then(res => res.json())
             .then(data => {
-                var layer = L.geoJSON(data, {
+                var layer = L.geojson(data, {
                     pane: 'bivariatePane',
                     style: function(feature) {
                         return {
@@ -118,10 +118,10 @@
             }).catch(err => console.error('ไม่สามารถโหลดไฟล์ bivariate_map.GeoJSON ได้:', err));
 
         // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer.GeoJSON (สี #49bef1 ทึบ 70%)
-        fetch('road_buffer.GeoJSON')
+        fetch('road_buffer.geojson')
             .then(res => res.json())
             .then(data => {
-                L.geoJSON(data, {
+                L.geojson(data, {
                     pane: 'roadPane',
                     style: {
                         color: '#ffffff',        // เส้นขอบขาวบาง ๆ คัตติ้งสวย ๆ
@@ -136,7 +136,7 @@
             }).catch(err => console.error('ไม่สามารถโหลดไฟล์ road_buffer.GeoJSON ได้:', err));
 
         // 7. โหลดเลเยอร์บนสุด: seven_buffer.GeoJSON (สี #3596ff ทึบ 50%)
-        fetch('seven_buffer.GeoJSON')
+        fetch('seven_buffer.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
