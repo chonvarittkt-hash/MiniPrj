@@ -60,15 +60,12 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // 1. เริ่มต้นสร้างแผนที่
         var map = L.map('map').setView([13.8140, 100.0382], 10);
 
-        // 2. เรียกแผนที่ฐาน CARTO Dark Matter
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap contributors & CARTO'
         }).addTo(map);
 
-        // 3. ล็อกระดับแผ่นใสความสูงต่ำ (Panes) 
         map.createPane('bivariatePane');
         map.getPane('bivariatePane').style.zIndex = 400; 
 
@@ -78,79 +75,88 @@
         map.createPane('sevenPane');
         map.getPane('sevenPane').style.zIndex = 600;     
 
-        // 4. กำหนดกลุ่มตัวแปร (Layer Groups)
         var bivariateGroup = L.layerGroup().addTo(map);
         var roadBufferGroup = L.layerGroup().addTo(map);
         var shopBufferGroup = L.layerGroup().addTo(map);
 
-        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map
-        fetch('bivariate_map.geojson')
-            .then(res => res.json())
-            .then(data => {
-                var layer = L.geoJSON(data, {
-                    pane: 'bivariatePane',
-                    style: function(feature) {
-                        return {
-                            fillColor: feature.properties.hex_color || '#bdc3c7',
-                            weight: 0.6,
-                            opacity: 1,
-                            color: '#1e1e1e', 
-                            fillOpacity: 1.0
-                        };
-                    },
-                    onEachFeature: function(feature, layer) {
-                        var popupContent = "<div style='font-family:Arial; font-size:13px; color:#333;'>" +
-                            "<b>รหัสพื้นที่ ID:</b> " + (feature.properties.id || 'ไม่มีข้อมูล') + "<br>" +
-                            "<b>Matrix Code:</b> " + (feature.properties.Matrix_Code || 'ไม่มีข้อมูล') + "<br>" +
-                            "<b>ผลวิเคราะห์ทำเล:</b> <span style='color:" + (feature.properties.hex_color || '#333') + "; font-weight:bold;'>" + (feature.properties.ผลวิเคราะห์ทำเล || 'ไม่ได้ระบุ') + "</span>" +
-                            "</div>";
-                        layer.bindPopup(popupContent);
-                    }
-                }).addTo(bivariateGroup);
+        // ฟังก์ชันอัจฉริยะ โหลดไฟล์แบบดักทุกทาง (ลองตัวเล็กก่อน ถ้าพังไปลองตัวใหญ่)
+        function smartFetch(fileNameLowerCase, fileNameUpperCase, onSuccess) {
+            fetch(fileNameLowerCase)
+                .then(res => {
+                    if (!res.ok) throw new Error('ลองตัวใหญ่แทน');
+                    return res.json();
+                })
+                .then(data => onSuccess(data))
+                .catch(() => {
+                    // ถ้าหาตัวเล็กไม่เจอ จะวิ่งมาหาตัวใหญ่ทันที
+                    fetch(fileNameUpperCase)
+                        .then(res => res.json())
+                        .then(data => onSuccess(data))
+                        .catch(err => console.error('โหลดไม่ได้ทั้งสองแบบ:', err));
+                });
+        }
 
-                var bounds = layer.getBounds();
-                if (bounds.isValid()) {
-                    map.fitBounds(bounds);
+        // 5. โหลดเลเยอร์ฐานล่างสุด: bivariate_map
+        smartFetch('bivariate_map.geojson', 'bivariate_map.GeoJSON', function(data) {
+            var layer = L.geoJSON(data, {
+                pane: 'bivariatePane',
+                style: function(feature) {
+                    return {
+                        fillColor: feature.properties.hex_color || '#bdc3c7',
+                        weight: 0.6,
+                        opacity: 1,
+                        color: '#1e1e1e', 
+                        fillOpacity: 1.0
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    var popupContent = "<div style='font-family:Arial; font-size:13px; color:#333;'>" +
+                        "<b>รหัสพื้นที่ ID:</b> " + (feature.properties.id || 'ไม่มีข้อมูล') + "<br>" +
+                        "<b>Matrix Code:</b> " + (feature.properties.Matrix_Code || 'ไม่มีข้อมูล') + "<br>" +
+                        "<b>ผลวิเคราะห์ทำเล:</b> <span style='color:" + (feature.properties.hex_color || '#333') + "; font-weight:bold;'>" + (feature.properties.ผลวิเคราะห์ทำเล || 'ไม่ได้ระบุ') + "</span>" +
+                        "</div>";
+                    layer.bindPopup(popupContent);
                 }
-            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ bivariate_map.geojson ได้:', err));
+            }).addTo(bivariateGroup);
+
+            var bounds = layer.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds);
+            }
+        });
 
         // 6. โหลดเลเยอร์ชั้นกลาง: road_buffer
-        fetch('road_buffer.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    pane: 'roadPane',
-                    style: {
-                        color: '#ffffff',        
-                        weight: 0.6,
-                        fillColor: '#49bef1',    
-                        fillOpacity: 0.7         
-                    },
-                    onEachFeature: function(feature, layer) {
-                        layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> แนวขอบเขตโครงข่ายถนนหลัก (Buffer 100 เมตร)</div>");
-                    }
-                }).addTo(roadBufferGroup);
-            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ road_buffer.geojson ได้:', err));
+        smartFetch('road_buffer.geojson', 'road_buffer.GeoJSON', function(data) {
+            L.geoJSON(data, {
+                pane: 'roadPane',
+                style: {
+                    color: '#ffffff',        
+                    weight: 0.6,
+                    fillColor: '#49bef1',    
+                    fillOpacity: 0.7         
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> แนวขอบเขตโครงข่ายถนนหลัก (Buffer 100 เมตร)</div>");
+                }
+            }).addTo(roadBufferGroup);
+        });
 
         // 7. โหลดเลเยอร์บนสุด: seven_buffer
-        fetch('seven_buffer.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    pane: 'sevenPane',
-                    style: {
-                        color: '#3596ff',        
-                        weight: 1.2,
-                        fillColor: '#3596ff',    
-                        fillOpacity: 0.5         
-                    },
-                    onEachFeature: function(feature, layer) {
-                        layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> รัศมีบริการของร้าน 7-11 เดิม (Buffer 500 เมตร)</div>");
-                    }
-                }).addTo(shopBufferGroup);
-            }).catch(err => console.error('ไม่สามารถโหลดไฟล์ seven_buffer.geojson ได้:', err));
+        smartFetch('seven_buffer.geojson', 'seven_buffer.GeoJSON', function(data) {
+            L.geoJSON(data, {
+                pane: 'sevenPane',
+                style: {
+                    color: '#3596ff',        
+                    weight: 1.2,
+                    fillColor: '#3596ff',    
+                    fillOpacity: 0.5         
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup("<div style='color:#333;'><b>ข้อมูล:</b> รัศมีบริการของร้าน 7-11 เดิม (Buffer 500 เมตร)</div>");
+                }
+            }).addTo(shopBufferGroup);
+        });
 
-        // 8. แผงควบคุมเลเยอร์มุมขวาบน (Layer Control)
         var overlayLayers = {
             "🏪 พื้นที่บริการ 7-11": shopBufferGroup,
             "🛣️ โครงข่ายถนนหลัก": roadBufferGroup,
@@ -158,7 +164,6 @@
         };
         L.control.layers(null, overlayLayers, {collapsed: false}).addTo(map);
 
-        // 9. กล่องอธิบายแถบสีและสัญลักษณ์เชิงพื้นที่ (Legend)
         var legend = L.control({position: 'bottomright'});
         legend.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'legend');
